@@ -115,6 +115,78 @@ protected:
   std::string commentString(std::string);
 };
 
+class DacePrinter : public IRPrinter {
+public:
+  DacePrinter(std::ostream& stream);
+  DacePrinter(std::ostream& stream, bool color = false, bool simplify = true);
+  virtual ~DacePrinter();
+
+  void print(Stmt);
+
+protected:
+  using IRPrinter::visit;
+  virtual void visit(const Literal*);
+  virtual void visit(const Var*);
+  virtual void visit(const Neg*);
+  virtual void visit(const Sqrt*);
+  virtual void visit(const Add*);
+  virtual void visit(const Sub*);
+  virtual void visit(const Mul*);
+  virtual void visit(const Div*);
+  virtual void visit(const Rem*);
+  virtual void visit(const Min*);
+  virtual void visit(const Max*);
+  virtual void visit(const BitAnd*);
+  virtual void visit(const BitOr*);
+  virtual void visit(const Eq*);
+  virtual void visit(const Neq*);
+  virtual void visit(const Gt*);
+  virtual void visit(const Lt*);
+  virtual void visit(const Gte*);
+  virtual void visit(const Lte*);
+  virtual void visit(const And*);
+  virtual void visit(const Or*);
+  virtual void visit(const BinOp*);
+  virtual void visit(const Cast*);
+  virtual void visit(const Call*);
+  virtual void visit(const IfThenElse*);
+  virtual void visit(const Case*);
+  virtual void visit(const Switch*);
+  virtual void visit(const Load*);
+  virtual void visit(const Malloc*);
+  virtual void visit(const Sizeof*);
+  virtual void visit(const Store*);
+  virtual void visit(const For*);
+  virtual void visit(const While*);
+  virtual void visit(const Block*);
+  virtual void visit(const Scope*);
+  virtual void visit(const Function*);
+  virtual void visit(const VarDecl*);
+  virtual void visit(const Assign*);
+  virtual void visit(const Yield*);
+  virtual void visit(const Allocate*);
+  virtual void visit(const Free*);
+  virtual void visit(const Comment*);
+  virtual void visit(const BlankLine*);
+  virtual void visit(const Continue*);
+  virtual void visit(const Print*);
+  virtual void visit(const GetProperty*);
+  virtual void visit(const Sort*);
+  virtual void visit(const Break*);
+
+  std::map<std::string, Datatype::Kind> arrays;
+  Datatype vals_type = Datatype::Undefined;
+
+  void resetNameCounters();
+
+  void doIndent();
+  void printBinOp(Expr a, Expr b, std::string op, Precedence precedence);
+  bool needsParentheses(Precedence precedence);
+
+  std::string keywordString(std::string);
+  std::string commentString(std::string);
+
+};
 }
 }
 
