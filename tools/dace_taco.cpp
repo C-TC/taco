@@ -57,13 +57,13 @@ static void printFlag(string flag, string text) {
 }
 
 static void printUsageInfo() {
-  cout << "Usage: taco <index expression> [options]" << endl;
+  cout << "Usage: dace_taco <index expression> [options]" << endl;
   cout << endl;
   cout << "Examples:" << endl;
-  cout << "  taco \"a(i) = b(i) + c(i)\"                            # Dense vector add" << endl;
-  cout << "  taco \"a(i) = b(i) + c(i)\" -f=b:s -f=c:s -f=a:s       # Sparse vector add" << endl;
-  cout << "  taco \"a(i) = B(i,j) * c(j)\" -f=B:ds                  # SpMV" << endl;
-  cout << "  taco \"A(i,l) = B(i,j,k) * C(j,l) * D(k,l)\" -f=B:sss  # MTTKRP" << endl;
+  cout << "  dace_taco \"a(i) = b(i) + c(i)\"                            # Dense vector add" << endl;
+  cout << "  dace_taco \"a(i) = b(i) + c(i)\" -f=b:s -f=c:s -f=a:s       # Sparse vector add" << endl;
+  cout << "  dace_taco \"a(i) = B(i,j) * c(j)\" -f=B:ds                  # SpMV" << endl;
+  cout << "  dace_taco \"A(i,l) = B(i,j,k) * C(j,l) * D(k,l)\" -f=B:sss  # MTTKRP" << endl;
   cout << endl;
   cout << "Options:" << endl;
   printFlag("f=<tensor>:<format>",
@@ -92,7 +92,7 @@ static void printUsageInfo() {
   printFlag("write-compute",
             "Write the compute kernel to a file.");
   cout << endl;
-  printFlag("write-assembly",
+  printFlag("write-assemble",
             "Write the assembly kernel to a file.");
   cout << endl;
   printFlag("write-concrete",
@@ -700,7 +700,7 @@ int main(int argc, char* argv[]) {
     else if ("-write-compute" == argName) {
       writeCompute = true;
     }
-    else if ("-write-assembly" == argName) {
+    else if ("-write-assemble" == argName) {
       writeAssemble = true;
     }
     else if ("-write-concrete" == argName) {
@@ -764,7 +764,7 @@ int main(int argc, char* argv[]) {
   stmt = scalarPromote(stmt);
   
   if (writeConcrete) {
-    std::string filePath = outputDirectory + '/' + prefix + "_concrete";
+    std::string filePath = outputDirectory + '/' + prefix + "concrete.txt";
     
     std::ofstream filestream;
     filestream.open(filePath,
@@ -781,7 +781,7 @@ int main(int argc, char* argv[]) {
   IterationGraph iterationGraph;
   if (writeIterationGraph) {
     iterationGraph = IterationGraph::make(tensor.getAssignment());
-    std::string filePath = outputDirectory + '/' + prefix + "_iterationGraph";
+    std::string filePath = outputDirectory + '/' + prefix + "iterationGraph.dot";
     
     std::ofstream filestream;
     filestream.open(filePath,
@@ -791,29 +791,28 @@ int main(int argc, char* argv[]) {
   }
 
   if (writeCompute) {
-    std::string filePath = outputDirectory + '/' + prefix + "_compute.py";
+    std::string filePath = outputDirectory + '/' + prefix + "compute.py";
     
     std::ofstream filestream;
     filestream.open(filePath,
                     std::ofstream::out|std::ofstream::trunc);
     ir::DacePrinter dprinter = ir::DacePrinter(filestream, false, true);
     dprinter.print(compute);
+    filestream << endl << "sdfg = " << prefix << "compute.to_sdfg()" << endl;
+    filestream << "sdfg.save(\"" << outputDirectory << "/" << prefix << "compute.sdfg\")" << endl;
     filestream.close();    
   }
 
   if (writeAssemble) {
-    std::string filePath = outputDirectory + '/' + prefix + "_assemble.py";
+    std::string filePath = outputDirectory + '/' + prefix + "assemble.py";
     
     std::ofstream filestream;
     filestream.open(filePath,
                     std::ofstream::out|std::ofstream::trunc);
     ir::DacePrinter dprinter = ir::DacePrinter(filestream, false, true);
-    dprinter.print(compute);
+    dprinter.print(assemble);
+    filestream << endl << "sdfg = " << prefix << "assemble.to_sdfg()" << endl;
+    filestream << "sdfg.save(\"" << outputDirectory << "/" << prefix << "assemble.sdfg\")" << endl;
     filestream.close();
   }
-
-
-
-
-
 }
