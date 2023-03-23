@@ -1337,10 +1337,10 @@ int main(int argc, char* argv[]) {
 
     if (compute.defined()) {
       //codegen->compile(compute, false);
-      // ir::IRPrinter printer = ir::IRPrinter(cout, true, true);
-      // printer.print(compute);
-      ir::DacePrinter dprinter = ir::DacePrinter(cout, true, true);
-      dprinter.print(compute);
+      ir::IRPrinter printer = ir::IRPrinter(cout, true, true);
+      printer.print(compute);
+      // ir::DacePrinter dprinter = ir::DacePrinter(cout, true, true);
+      // dprinter.print(compute);
     }
     else {
       tensor.printComputeIR(cout, color, true);

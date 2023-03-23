@@ -944,9 +944,19 @@ void DacePrinter::visit(const BinOp* op) {
 }
 
 void DacePrinter::visit(const Cast* op) {
-  // no casting in python
+  // casting in python: int, float, complex
+  if (op->type.isInt()) {
+    stream << "int(";
+  } else if (op->type.isFloat()) {
+    stream << "float(";
+  } else if (op->type.isComplex()) {
+    stream << "complex(";
+  } else {
+    taco_ierror << "Unsupported cast type";
+  }
   parentPrecedence = Precedence::CAST;
   op->a.accept(this);
+  stream << ")";
 }
 
 void DacePrinter::visit(const Call* op) {
