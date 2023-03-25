@@ -76,6 +76,15 @@ static void printUsageInfo() {
             "Examples: A:ds (i.e., CSR), B:ds:1,0 (i.e., CSC), c:d (i.e., "
             "dense vector), D:sss (i.e., CSF).");
   cout << endl;
+  printFlag("sampled-replace=<cur_tensor>:<target_tensor>",
+            "Special operation for SDDMM like operations. "
+            "cur_tensor and target_tensor should have same sparsity pattern and"
+            "same index variables in the same order. This will replace the index"
+            "varialbe of cur_tensor vals with the index variable of target_tensor"
+            "vals. E.g.A(i,j)=D(i,j)*B(i,k)*C(k,j), -f=A:ds:0,1, -f=A:ds:0,1"
+            "will do the following: A_vals[jA] -> A_vals[jD], and remove declaration"
+            "and assignments of jA.");
+  cout << endl;
   printFlag("s=\"<command>(<params>)\"",
             "Specify a scheduling command to apply to the generated code. "
             "Parameters take the form of a comma-delimited list. See "
@@ -590,6 +599,8 @@ int main(int argc, char* argv[]) {
   vector<string> kernelFilenames;
 
   vector<vector<string>> scheduleCommands;
+
+  vector<string> sampled_replace;
   
   for (int i = 1; i < argc; i++) {
     string arg = argv[i];
@@ -687,6 +698,15 @@ int main(int argc, char* argv[]) {
         }
       }
       formats.insert({tensorName, Format(modeTypePacks, modeOrdering)});
+    }
+    else if ("-sampled-replace" == argName) {
+      vector<string> descriptor = util::split(argValue, ":");
+      if (descriptor.size() != 2) {
+        return reportError("Incorrect sampled replace descriptor", 4);
+      }
+      string cur_tensor = descriptor[0];
+      string target_tensor = descriptor[1];
+      sampled_replace = vector<string>{cur_tensor, target_tensor};
     }
     else if ("-c" == argName) {
       computeWithAssemble = true;
@@ -796,7 +816,7 @@ int main(int argc, char* argv[]) {
     std::ofstream filestream;
     filestream.open(filePath,
                     std::ofstream::out|std::ofstream::trunc);
-    ir::DacePrinter dprinter = ir::DacePrinter(filestream, false, true);
+    ir::DacePrinter dprinter = ir::DacePrinter(filestream, false, true, sampled_replace);
     dprinter.print(compute);
     filestream << endl << "sdfg = " << prefix << "compute.to_sdfg()" << endl;
     filestream << "sdfg.save(\"" << outputDirectory << "/" << prefix << "compute.sdfg\")" << endl;

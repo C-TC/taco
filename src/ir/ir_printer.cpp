@@ -701,8 +701,8 @@ DacePrinter::DacePrinter(std::ostream& stream)
     : IRPrinter(stream, false, true) {
 }
 
-DacePrinter::DacePrinter(std::ostream& stream, bool color, bool simplify)
-    : IRPrinter(stream, color, simplify) {
+DacePrinter::DacePrinter(std::ostream& stream, bool color, bool simplify, vector<std::string> sampled_replace)
+    : IRPrinter(stream, color, simplify), sampled_replace(sampled_replace) {
 }
 
 DacePrinter::~DacePrinter() {
@@ -760,6 +760,63 @@ void DacePrinter::print(Stmt stmt) {
 
   for (const auto &arr : coll.arrays){
     stream << "size_" << arr.first << " = dace.symbol('" << "size_" << arr.first << "')" << endl;
+  }
+
+  // sampled replace
+  // collect jA, jD from A, D
+  // assume jA and jD are Var.
+  struct ValsLocCollector: public IRVisitor {
+    Var* src_var = nullptr;
+    Var*  target_var = nullptr;
+    vector<std::string> sampled_replace;
+    ValsLocCollector(vector<std::string> sampled_replace) : sampled_replace(sampled_replace) {}
+
+    using IRVisitor::visit;
+
+    void visit(const Load* op) {
+      if (isa<GetProperty>(op->arr)) {
+        auto get_prop = to<GetProperty>(op->arr);
+        if (get_prop->property == TensorProperty::Values) {
+          if (isa<Var>(get_prop->tensor)) {
+            auto tensor_var = to<Var>(get_prop->tensor);
+            if (tensor_var->name == sampled_replace[0]) {
+              src_var = const_cast<Var*>(to<Var>(op->loc));
+            } else if (tensor_var->name == sampled_replace[1]) {
+              target_var = const_cast<Var*>(to<Var>(op->loc));
+            }
+          }
+        }
+      }
+    }
+
+    void visit(const Store* op) {
+      if (isa<GetProperty>(op->arr)) {
+        auto get_prop = to<GetProperty>(op->arr);
+        if (get_prop->property == TensorProperty::Values) {
+          if (isa<Var>(get_prop->tensor)) {
+            auto tensor_var = to<Var>(get_prop->tensor);
+            if (tensor_var->name == sampled_replace[0]) {
+              src_var = const_cast<Var*>(to<Var>(op->loc));
+            } else if (tensor_var->name == sampled_replace[1]) {
+              target_var = const_cast<Var*>(to<Var>(op->loc));
+            }
+          }
+        }
+      }
+      op->data.accept(this);
+    }
+
+
+  };
+
+  if (!sampled_replace.empty()) {
+    ValsLocCollector var_coll(sampled_replace);
+    stmt.accept(&var_coll);
+    src_var = var_coll.src_var;
+    target_var = var_coll.target_var;
+    if (src_var == nullptr || target_var == nullptr) {
+      taco_ierror << "Can not find sampled replace index pair." << endl;
+    }
   }
 
   stmt.accept(this);
@@ -831,6 +888,12 @@ void DacePrinter::visit(const Literal* op) {
 }
 
 void DacePrinter::visit(const Var* op) {
+  // SDDMM jA->jD
+  if (src_var == op) {
+    this->visit(target_var);
+    return;
+  }
+
   if (varNames.contains(op)) {
     stream << varNames.get(op);
   }
@@ -1135,9 +1198,15 @@ void DacePrinter::visit(const Function* op) {
 }
 
 void DacePrinter::visit(const VarDecl* op) {
+  taco_iassert(isa<Var>(op->var));
+  // SDDMM
+  if (to<Var>(op->var) == src_var) {
+    return;
+  }
+
+
   doIndent();
   
-  taco_iassert(isa<Var>(op->var));
   if (to<Var>(op->var)->is_ptr) {
     ;
   }
@@ -1153,6 +1222,11 @@ void DacePrinter::visit(const VarDecl* op) {
 
 
 void DacePrinter::visit(const Assign* op) {
+  // SDDMM
+  if (isa<Var>(op->lhs) && to<Var>(op->lhs) == src_var) {
+    return;
+  }
+
   doIndent();
   op->lhs.accept(this);
   parentPrecedence = Precedence::TOP;

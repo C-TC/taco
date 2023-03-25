@@ -118,7 +118,7 @@ protected:
 class DacePrinter : public IRPrinter {
 public:
   DacePrinter(std::ostream& stream);
-  DacePrinter(std::ostream& stream, bool color = false, bool simplify = true);
+  DacePrinter(std::ostream& stream, bool color = false, bool simplify = true, std::vector<std::string> sampled_replace = {});
   virtual ~DacePrinter();
 
   void print(Stmt);
@@ -185,6 +185,10 @@ protected:
 
   std::string keywordString(std::string);
   std::string commentString(std::string);
+
+  std::vector<std::string> sampled_replace;
+  Var* src_var = nullptr;
+  Var* target_var = nullptr;
 
 };
 }
