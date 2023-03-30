@@ -701,8 +701,8 @@ DacePrinter::DacePrinter(std::ostream& stream)
     : IRPrinter(stream, false, true) {
 }
 
-DacePrinter::DacePrinter(std::ostream& stream, bool color, bool simplify, vector<std::string> sampled_replace)
-    : IRPrinter(stream, color, simplify), sampled_replace(sampled_replace) {
+DacePrinter::DacePrinter(std::ostream& stream, bool color, bool simplify, vector<std::string> sampled_replace, bool force_map)
+    : IRPrinter(stream, color, simplify), sampled_replace(sampled_replace), force_map(force_map) {
 }
 
 DacePrinter::~DacePrinter() {
@@ -1143,14 +1143,25 @@ void DacePrinter::visit(const For* op) {
   doIndent();
   stream << keywordString("for") << " ";
   op->var.accept(this);
-  stream << " in range(";
-  op->start.accept(this);
-  stream << keywordString(", ");
-  parentPrecedence = BOTTOM;
-  op->end.accept(this);
-  stream << keywordString(", ");
-  op->increment.accept(this);
-  stream << "):\n";
+  if (force_map) {
+    stream << " in dace.map[";
+    op->start.accept(this);
+    stream << keywordString(": ");
+    parentPrecedence = BOTTOM;
+    op->end.accept(this);
+    stream << keywordString(": ");
+    op->increment.accept(this);
+    stream << "]:\n";
+  } else {
+    stream << " in range(";
+    op->start.accept(this);
+    stream << keywordString(", ");
+    parentPrecedence = BOTTOM;
+    op->end.accept(this);
+    stream << keywordString(", ");
+    op->increment.accept(this);
+    stream << "):\n";
+  }
 
   op->contents.accept(this);
   doIndent();

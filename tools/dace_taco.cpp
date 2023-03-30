@@ -85,6 +85,10 @@ static void printUsageInfo() {
             "will do the following: A_vals[jA] -> A_vals[jD], and remove declaration"
             "and assignments of jA.");
   cout << endl;
+  printFlag("force-map",
+            "Force printer to generate dace.map for For nodes."
+            "Warning: May generate invalid code.");
+  cout << endl;
   printFlag("s=\"<command>(<params>)\"",
             "Specify a scheduling command to apply to the generated code. "
             "Parameters take the form of a comma-delimited list. See "
@@ -575,6 +579,8 @@ int main(int argc, char* argv[]) {
 
   bool setSchedule         = false;
 
+  bool force_map = false;
+
   ParallelSchedule sched = ParallelSchedule::Static;
   int chunkSize = 0;
   int nthreads = 0;
@@ -711,6 +717,9 @@ int main(int argc, char* argv[]) {
     else if ("-c" == argName) {
       computeWithAssemble = true;
     }
+    else if ("-force-map" == argName) {
+      force_map = true;
+    }
     else if ("-O" == argName) {
       if (util::split(argValue, ":").size() > 1) {
         return reportError("Incorrect -O usage", 3);
@@ -776,8 +785,8 @@ int main(int argc, char* argv[]) {
     setSchedulingCommands(scheduleCommands, parser, stmt);
   }
   else {
-    stmt = insertTemporaries(stmt);
-    stmt = parallelizeOuterLoop(stmt);
+    // stmt = insertTemporaries(stmt);
+    // stmt = parallelizeOuterLoop(stmt);
   }
   set_CUDA_codegen_enabled(false);
 
@@ -816,7 +825,7 @@ int main(int argc, char* argv[]) {
     std::ofstream filestream;
     filestream.open(filePath,
                     std::ofstream::out|std::ofstream::trunc);
-    ir::DacePrinter dprinter = ir::DacePrinter(filestream, false, true, sampled_replace);
+    ir::DacePrinter dprinter = ir::DacePrinter(filestream, false, true, sampled_replace, force_map);
     dprinter.print(compute);
     filestream << endl << "sdfg = " << prefix << "compute.to_sdfg()" << endl;
     filestream << "sdfg.save(\"" << outputDirectory << "/" << prefix << "compute.sdfg\")" << endl;
